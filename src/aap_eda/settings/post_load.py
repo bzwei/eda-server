@@ -89,19 +89,19 @@ def _rq_common_parameters(settings: Dynaconf):
         "USERNAME": settings['REDIS_USER'],
         "PASSWORD": settings['REDIS_USER_PASSWORD'],
     }
-    if settings['REDIS_UNIX_SOCKET_PATH']:
+    if 'REDIS_UNIX_SOCKET_PATH' in settings:
         params["UNIX_SOCKET_PATH"] = settings['REDIS_UNIX_SOCKET_PATH']
     else:
         params |= {
-            "HOST": settings.REDIS_HOST,
-            "PORT": settings.REDIS_PORT,
+            "HOST": settings['REDIS_HOST'],
+            "PORT": settings['REDIS_PORT'],
         }
-        if settings.REDIS_TLS:
+        if 'REDIS_TLS' in settings:
             params["SSL"] = True
         else:
             # TODO: Deprecate implicit setting based on cert path in favor of
             #       MQ_TLS as the determinant.
-            if settings.REDIS_CLIENT_CERT_PATH and settings.REDIS_TLS is None:
+            if 'REDIS_CLIENT_CERT_PATH' in settings and settings['REDIS_TLS'] is None:
                 params["SSL"] = True
             else:
                 params["SSL"] = False
@@ -111,8 +111,8 @@ def _rq_common_parameters(settings: Dynaconf):
 def _rq_redis_client_additional_parameters(settings: Dynaconf):
     params = {}
     if (
-        not settings['REDIS_UNIX_SOCKET_PATH']
-    ) and settings['REDIS_CLIENT_CERT_PATH']:
+       'REDIS_UNIX_SOCKET_PATH' not in settings
+    ) and 'REDIS_CLIENT_CERT_PATH' in settings:
         params |= {
             "ssl_certfile": settings['REDIS_CLIENT_CERT_PATH'],
             "ssl_keyfile": settings['REDIS_CLIENT_KEY_PATH'],
