@@ -5,7 +5,7 @@ from dynaconf import settings as dynaconf
 from flags.state import flag_state
 from rest_framework import status
 
-from aap_eda.settings.default import toggle_feature_flags
+from aap_eda.settings.post_load import toggle_feature_flags
 from tests.integration.constants import api_url_v1
 
 

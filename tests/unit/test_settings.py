@@ -16,6 +16,7 @@ from unittest.mock import patch
 
 import pytest
 
+from aap_eda.settings.constants import DEFAULT_QUEUE_TIMEOUT
 from aap_eda.settings.default import (
     DEFAULT_QUEUE_TIMEOUT,
     DEFAULT_RULEBOOK_QUEUE_TIMEOUT,

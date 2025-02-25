@@ -45,7 +45,7 @@ from aap_eda.services.activation.engine.podman import (
     _get_podman_socket_url,
     get_podman_client,
 )
-from aap_eda.settings.default import settings as orig_dynaconf_settings
+from aap_eda.settings.default import DYNACONF as orig_dynaconf_settings
 
 from .utils import InitData, get_ansible_rulebook_cmdline, get_request
 
