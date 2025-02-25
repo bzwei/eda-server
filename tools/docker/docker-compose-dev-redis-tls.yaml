@@ -1,6 +1,5 @@
 x-environment:
   &common-env
-  - EDA_MODE=${EDA_MODE:-development}
   - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-aap_eda.settings.default}
   - EDA_MQ_HOST=${EDA_MQ_HOST:-redis}
   - EDA_MQ_PORT=${EDA_MQ_PORT:-6379}

@@ -3,6 +3,8 @@ import os
 from django.core.exceptions import ImproperlyConfigured
 from dynaconf import Dynaconf
 from split_settings.tools import include
+from typing import Any
+from dynaconf.utils.functional import empty
 
 from aap_eda import utils
 from aap_eda.core.enums import RulebookProcessLogLevel
@@ -39,14 +41,6 @@ def _get_boolean(settings: Dynaconf, name: str, default=False) -> bool:
 def _get_list_from_str(settings: Dynaconf, name: str) -> list:
     value = settings.get(name, [])
     return value.split(",") if isinstance(value, str) else value
-
-
-def toggle_feature_flags(settings: Dynaconf):
-    flags = settings.get("FLAGS", {})
-    for feature in flags.keys():
-        if feature in settings:
-            flags[feature][0]["value"] = settings.get(feature)
-
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
@@ -91,12 +85,12 @@ def _config_authentication_backends():
 
 def _rq_common_parameters(settings: Dynaconf):
     params = {
-        "DB": settings.REDIS_DB,
-        "USERNAME": settings.REDIS_USER,
-        "PASSWORD": settings.REDIS_USER_PASSWORD,
+        "DB": settings['REDIS_DB'],
+        "USERNAME": settings['REDIS_USER'],
+        "PASSWORD": settings['REDIS_USER_PASSWORD'],
     }
-    if settings.REDIS_UNIX_SOCKET_PATH:
-        params["UNIX_SOCKET_PATH"] = settings.REDIS_UNIX_SOCKET_PATH
+    if settings['REDIS_UNIX_SOCKET_PATH']:
+        params["UNIX_SOCKET_PATH"] = settings['REDIS_UNIX_SOCKET_PATH']
     else:
         params |= {
             "HOST": settings.REDIS_HOST,
@@ -117,12 +111,12 @@ def _rq_common_parameters(settings: Dynaconf):
 def _rq_redis_client_additional_parameters(settings: Dynaconf):
     params = {}
     if (
-        not settings.REDIS_UNIX_SOCKET_PATH
-    ) and settings.REDIS_CLIENT_CERT_PATH:
+        not settings['REDIS_UNIX_SOCKET_PATH']
+    ) and settings['REDIS_CLIENT_CERT_PATH']:
         params |= {
-            "ssl_certfile": settings.REDIS_CLIENT_CERT_PATH,
-            "ssl_keyfile": settings.REDIS_CLIENT_KEY_PATH,
-            "ssl_ca_certs": settings.REDIS_CLIENT_CACERT_PATH,
+            "ssl_certfile": settings['REDIS_CLIENT_CERT_PATH'],
+            "ssl_keyfile": settings['REDIS_CLIENT_KEY_PATH'],
+            "ssl_ca_certs": settings['REDIS_CLIENT_CACERT_PATH'],
         }
     return params
 
@@ -133,17 +127,17 @@ def get_rq_queues(settings: Dynaconf) -> dict:
 
     # Configure the default queue
     queues["default"] = _rq_common_parameters(settings)
-    queues["default"]["DEFAULT_TIMEOUT"] = settings.DEFAULT_QUEUE_TIMEOUT
+    queues["default"]["DEFAULT_TIMEOUT"] = settings['DEFAULT_QUEUE_TIMEOUT']
     queues["default"][
         "REDIS_CLIENT_KWARGS"
     ] = _rq_redis_client_additional_parameters(settings)
 
     # Configure the worker queues
-    for queue in settings.RULEBOOK_WORKER_QUEUES:
+    for queue in settings['RULEBOOK_WORKER_QUEUES']:
         queues[queue] = _rq_common_parameters(settings)
         queues[queue][
             "DEFAULT_TIMEOUT"
-        ] = settings.DEFAULT_RULEBOOK_QUEUE_TIMEOUT
+        ] = settings['DEFAULT_RULEBOOK_QUEUE_TIMEOUT']
         queues[queue][
             "REDIS_CLIENT_KWARGS"
         ] = _rq_redis_client_additional_parameters(settings)
@@ -155,7 +149,8 @@ def get_rq_queues(settings: Dynaconf) -> dict:
 def get_rulebook_process_log_level(
     settings: Dynaconf,
 ) -> RulebookProcessLogLevel:
-    log_level = settings.ANSIBLE_RULEBOOK_LOG_LEVEL
+    print
+    log_level = settings["ANSIBLE_RULEBOOK_LOG_LEVEL"]
     if log_level is None:
         return RulebookProcessLogLevel.ERROR
     if log_level.lower() == "-v":
@@ -267,6 +262,24 @@ def _set_resource_server(settings: Dynaconf) -> None:
             }
         )
 
+def toggle_feature_flags(settings: Dynaconf) -> dict[str, Any]:
+    """Toggle FLAGS based on installer settings.
+    FLAGS is a django-flags formatted dictionary.
+        FLAGS={
+            "FEATURE_SOME_PLATFORM_FLAG_ENABLED": [
+                {"condition": "boolean", "value": False, "required": True},
+                {"condition": "before date", "value": "2022-06-01T12:00Z"},
+            ]
+        }
+    Installers will place `FEATURE_SOME_PLATFORM_FLAG_ENABLED=True/False` in the settings file.
+    This function will update the value in the index 0 in FLAGS with the installer value.
+    """
+    data = {}
+    for feature_name, feature_content in settings.get("FLAGS", {}).items():
+        if (installer_value := settings.get(feature_name, empty)) is not empty:
+            feature_content[0]["value"] = installer_value
+            data[f"FLAGS__{feature_name}"] = feature_content
+    return data
 
 def post_loading(settings: Dynaconf):
     settings.SECRET_KEY = _get_secret_key(settings)
@@ -278,7 +291,6 @@ def post_loading(settings: Dynaconf):
     settings.CSRF_TRUSTED_ORIGINS = _get_list_from_str(
         settings, "CSRF_TRUSTED_ORIGINS"
     )
-    toggle_feature_flags(settings)
     settings.DATABASES = _get_databases_settings(settings)
     settings.AUTHENTICATION_BACKENDS = _config_authentication_backends()
 
