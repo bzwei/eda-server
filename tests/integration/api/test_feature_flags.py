@@ -45,9 +45,14 @@ def test_feature_flags_override_flags(admin_client):
             {"condition": "boolean", "value": False},
         ],
     },
+    FEATURE_SOME_PLATFORM_FLAG_ENABLED=True,
 )
 @pytest.mark.django_db
 def test_feature_flags_toggle():
-    dynaconf.configure(FEATURE_SOME_PLATFORM_FLAG_ENABLED=True)
-    toggle_feature_flags(settings.FLAGS, dynaconf)
+    settings_override = {"FLAGS": settings.FLAGS, "FEATURE_SOME_PLATFORM_FLAG_ENABLED": settings.FEATURE_SOME_PLATFORM_FLAG_ENABLED}
+    assert toggle_feature_flags(settings_override) == {
+        "FLAGS__FEATURE_SOME_PLATFORM_FLAG_ENABLED": [
+            {"condition": "boolean", "value": True},
+        ]
+    }
     assert flag_state("FEATURE_SOME_PLATFORM_FLAG_ENABLED") is True

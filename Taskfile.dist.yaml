@@ -1,7 +1,6 @@
 version: "3"
 
 env:
-  EDA_MODE: development
   DJANGO_SETTINGS_MODULE: "aap_eda.settings.default"
 
 vars:
